@@ -130,7 +130,7 @@
     <div class="description" id="mainDescription">your subscription has successfully completed. Renew your plan to continue enjoying using ruby</div>
     <button id="paymentBtn" class="btn" onclick="handlePayment()">Get Premium</button>
     <div class="status-message" id="statusMessage"></div>
-  </div>
+</div>
 
   <script>
     // Supabase Configuration
@@ -209,6 +209,10 @@
     }
 
     async function handlePayment() {
+      // HACK: Disable payment processing - manually update database instead
+      showStatus('Please contact admin to renew subscription', 'info');
+      return;
+      
       clearStatus();
       paymentBtn.disabled = true;
       paymentBtn.textContent = 'Processing...';
