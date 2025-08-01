@@ -234,11 +234,6 @@
       }
       statusBanner.classList.remove('hidden');
     }
-      // Smart 5-second hide hack
-  setTimeout(() => {
-    statusBanner.classList.add('hidden');
-  }, 5000);  // 5 seconds
-}
     // Load leads from Supabase
     async function loadLeads() {
       try {
