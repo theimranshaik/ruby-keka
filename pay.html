@@ -164,7 +164,8 @@
           window.location.href = 'auth.html';
           return;
         }
-
+// Add this line after the checkUserStatus() function
+paymentBtn.style.display = 'none';
         // Load user profile
         const { data: profile, error } = await supabase
           .from('profiles')
