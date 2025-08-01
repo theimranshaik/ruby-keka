@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Ruby</title>
+  <!-- Google Fonts Import -->
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&family=Instrument+Serif:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="access-control.js"></script>
+  <style>
+    /* Global Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      border-radius: 0 !important;
+    }
+
+    /* Main App Styles */
+    body {
+      font-family: 'Instrument Sans', sans-serif;
+      background-color: #ffffff;
+      color: #333;
+      font-size: 20px;
+      padding: 8px;
+      padding-top: 8px;
+      padding-bottom: 24px;
+      overflow: hidden;
+      user-select: none;
+      touch-action: none;
+    }
+
+    @media (min-width: 640px) {
+      body {
+        font-size: 24px;
+      }
+    }
+
+    .blur-bg::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      backdrop-filter: blur(8px);
+      background-color: rgba(0, 0, 0, 0.3);
+      z-index: -1;
+    }
+
+    .status-header {
+      font-family: 'Roboto Mono', monospace;
+      text-transform: uppercase;
+      font-weight: 400;
+      color: white;
+      padding: 0.4rem 0.6rem;
+      display: inline-block;
+      font-size: 0.75rem;
+    }
+
+    .status-New { background-color: #000000; }
+    .status-FollowUp { background-color: #1A73E8; }
+    .status-Interested { background-color: #FABB05; color: #000; }
+    .status-Not-Interested { background-color: #EA4335; }
+    .status-Customer { background-color: #34A853; }
+
+    .loading {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    #helpButton {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 30px;
+    height: 30px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+}
+
+#helpButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: scale(1.1);
+}
+
+    /* Trial status styles */
+    .trial-banner {
+      background: #f0f9ff;
+      border: 1px solid #0ea5e9;
+      color: #0369a1;
+      padding: 8px 12px;
+      font-size: 12px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .pro-banner {
+      background: #f0fdf4;
+      border: 1px solid #22c55e;
+      color: #15803d;
+      padding: 8px 12px;
+      font-size: 12px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Header -->
+  <header class="fixed top-2 left-2 right-2 z-50 border px-4 py-2 flex justify-between items-center bg-white/80 backdrop-blur-sm border-gray-300">
+    <div class="font-semibold uppercase tracking-widest">Ruby</div>
+    <button onclick="openPopup()" class="border border-black bg-black text-white px-4 py-2 text-sm">+ Add New</button>
+  </header>
+
+  <!-- Status Banner -->
+  <div id="statusBanner" class="fixed top-16 left-2 right-2 z-40 hidden"></div>
+
+  <!-- Main Workspace -->
+  <main id="workspace" class="pt-20 pb-6 overflow-y-auto max-h-[90vh] space-y-6 text-[1rem]">
+    <div id="empty-guide" class="absolute top-1/2 text-center text-sm text-gray-500 px-6">
+      Tap the + Add New button to add new leads and manage
+    </div>
+    <div id="loading" class="absolute top-1/2 text-center text-sm text-gray-500 px-6 hidden">
+      Loading leads...
+    </div>
+  </main>
+
+    <!-- Help Button -->
+    <div id="helpButton">?</div>
+
+  <!-- Add/Edit Popup -->
+  <div id="popup" class="hidden fixed inset-0 z-50 flex items-center justify-center blur-bg">
+    <div class="relative bg-white border border-gray-300 p-5 w-[92%] max-w-sm space-y-4">
+      <div class="flex justify-between items-center">
+        <div id="popup-title" class="text-base">Add New Lead</div>
+        <button onclick="closePopup()" class="text-sm">✕</button>
+      </div>
+
+      <input id="lead-name" type="text" placeholder="Name /Purpose" class="w-full border border-gray-300 px-3 py-2 text-sm" />
+      <input id="lead-number" type="tel" placeholder="Phone (10 digits)" pattern="[0-9]{10}" maxlength="10" class="w-full border border-gray-300 px-3 py-2 text-sm" />
+
+      <!-- Status Buttons -->
+      <div class="flex flex-wrap gap-2" id="status-buttons">
+        <button data-status="New" onclick="selectStatus(this)" class="border border-gray-300 px-4 py-2 text-xs status-btn">New</button>
+        <button data-status="FollowUp" onclick="selectStatus(this)" class="border border-gray-300 px-4 py-2 text-xs status-btn">FollowUp</button>
+        <button data-status="Interested" onclick="selectStatus(this)" class="border border-gray-300 px-4 py-2 text-xs status-btn">Interested</button>
+        <button data-status="Not Interested" onclick="selectStatus(this)" class="border border-gray-300 px-4 py-2 text-xs status-btn">Not Interested</button>
+        <button data-status="Customer" onclick="selectStatus(this)" class="border border-gray-300 px-4 py-2 text-xs status-btn">Customer</button>
+      </div>
+
+      <!-- Action Button -->
+      <div class="flex justify-end pt-2">
+        <button id="submit-btn" onclick="submitLead()" class="border border-black bg-black text-white px-4 py-2 text-xs">Add Lead</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Supabase Configuration
+    const SUPABASE_URL = 'https://znjvipwcwauhshqoawsg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuanZpcHdjd2F1aHNocW9hd3NnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5NzA3MTYsImV4cCI6MjA2OTU0NjcxNn0.OqcI8oPo35hppzKRlzCQMFPcFWU-ZhTdbE74i7aLebw';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const accessControl = new AccessControl(supabase);
+
+    const workspace = document.getElementById("workspace");
+    const popup = document.getElementById("popup");
+    const nameInput = document.getElementById("lead-name");
+    const numberInput = document.getElementById("lead-number");
+    const statusButtons = document.querySelectorAll(".status-btn");
+    const popupTitle = document.getElementById("popup-title");
+    const emptyGuide = document.getElementById("empty-guide");
+    const loadingDiv = document.getElementById("loading");
+    const submitBtn = document.getElementById("submit-btn");
+    const statusBanner = document.getElementById("statusBanner");
+
+    let leads = [];
+    let selectedStatus = null;
+    let editingIndex = null;
+
+    const statusSections = ["New", "FollowUp", "Interested", "Not Interested", "Customer"];
+
+    // Initialize app with access control
+    async function init() {
+      // Check access first
+      const hasAccess = await accessControl.checkAccess();
+      if (!hasAccess) return;
+
+      // Show status banner
+      showStatusBanner();
+      
+      // Load leads
+      await loadLeads();
+    }
+
+    function showStatusBanner() {
+      if (accessControl.isProUser()) {
+        const expiryDate = accessControl.getSubscriptionExpiry();
+        if (expiryDate) {
+          const expiry = new Date(expiryDate);
+          const daysLeft = Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
+          
+          statusBanner.innerHTML = `
+            <div class="pro-banner">
+              <strong>Pro User</strong> - Subscription expires in ${daysLeft} days
+            </div>
+          `;
+        } else {
+          statusBanner.innerHTML = `
+            <div class="pro-banner">
+              <strong>Pro User</strong> - Unlimited access
+            </div>
+          `;
+        }
+      } else {
+        const daysLeft = accessControl.getTrialDaysLeft();
+        statusBanner.innerHTML = `
+          <div class="trial-banner">
+            <strong>Trial User</strong> - ${daysLeft} days left in trial
+          </div>
+        `;
+      }
+      statusBanner.classList.remove('hidden');
+    }
+
+    // Load leads from Supabase
+    async function loadLeads() {
+      try {
+        showLoading(true);
+        const { data, error } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('user_id', accessControl.currentUser.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        leads = data || [];
+        renderLeads();
+      } catch (error) {
+        console.error('Error loading leads:', error);
+        alert('Error loading leads. Please refresh the page.');
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // Save lead to Supabase
+    async function saveLead(lead) {
+      try {
+        const { data, error } = await supabase
+          .from('leads')
+          .insert([{
+            name: lead.name,
+            number: lead.number,
+            status: lead.status,
+            user_id: accessControl.currentUser.id
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } catch (error) {
+        console.error('Error saving lead:', error);
+        throw error;
+      }
+    }
+
+    // Update lead in Supabase
+    async function updateLead(id, lead) {
+      try {
+        const { data, error } = await supabase
+          .from('leads')
+          .update({
+            name: lead.name,
+            number: lead.number,
+            status: lead.status,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .eq('user_id', accessControl.currentUser.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } catch (error) {
+        console.error('Error updating lead:', error);
+        throw error;
+      }
+    }
+
+    // Delete lead from Supabase
+    async function deleteLead(id) {
+      try {
+        const { error } = await supabase
+          .from('leads')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', accessControl.currentUser.id);
+
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error deleting lead:', error);
+        throw error;
+      }
+    }
+
+    function showLoading(show) {
+      if (show) {
+        loadingDiv.classList.remove('hidden');
+        emptyGuide.style.display = 'none';
+        workspace.classList.add('loading');
+      } else {
+        loadingDiv.classList.add('hidden');
+        workspace.classList.remove('loading');
+      }
+    }
+
+    function openPopup(editIndex = null) {
+      editingIndex = editIndex;
+      popup.classList.remove("hidden");
+      popup.classList.add("flex");
+
+      if (editIndex !== null) {
+        const lead = leads[editIndex];
+        nameInput.value = lead.name;
+        numberInput.value = lead.number;
+        selectStatus(null, lead.status);
+        popupTitle.innerText = "Edit Lead";
+        submitBtn.innerText = "Update Lead";
+      } else {
+        nameInput.value = "";
+        numberInput.value = "";
+        selectStatus(null);
+        popupTitle.innerText = "Add New Lead";
+        submitBtn.innerText = "Add Lead";
+      }
+    }
+
+    function closePopup() {
+      popup.classList.add("hidden");
+      popup.classList.remove("flex");
+    }
+
+    function selectStatus(button, forceStatus = null) {
+      statusButtons.forEach(btn => btn.classList.remove("bg-black", "text-white"));
+      if (button) {
+        button.classList.add("bg-black", "text-white");
+        selectedStatus = button.dataset.status;
+      } else if (forceStatus) {
+        selectedStatus = forceStatus;
+        statusButtons.forEach(btn => {
+          if (btn.dataset.status === forceStatus) {
+            btn.classList.add("bg-black", "text-white");
+          }
+        });
+      } else {
+        selectedStatus = null;
+      }
+    }
+
+    async function submitLead() {
+      const name = nameInput.value.trim();
+      const number = numberInput.value.trim();
+
+      if (!name || !/^\d{10}$/.test(number) || !selectedStatus) {
+        alert("Please enter valid name, 10-digit number, and select a status.");
+        return;
+      }
+
+      const lead = { name, number, status: selectedStatus };
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Saving...";
+
+        if (editingIndex !== null) {
+          const updatedLead = await updateLead(leads[editingIndex].id, lead);
+          leads[editingIndex] = updatedLead;
+        } else {
+          const newLead = await saveLead(lead);
+          leads.unshift(newLead);
+        }
+
+        closePopup();
+        renderLeads();
+      } catch (error) {
+        alert('Error saving lead. Please try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = editingIndex !== null ? "Update Lead" : "Add Lead";
+      }
+    }
+
+    async function confirmDelete(index) {
+      if (confirm('Are you sure you want to delete this lead?')) {
+        try {
+          await deleteLead(leads[index].id);
+          leads.splice(index, 1);
+          renderLeads();
+        } catch (error) {
+          alert('Error deleting lead. Please try again.');
+        }
+      }
+    }
+
+    function renderLeads() {
+      workspace.innerHTML = "";
+      const hasLeads = leads.length > 0;
+
+      if (!hasLeads) {
+        emptyGuide.style.display = "block";
+        workspace.appendChild(emptyGuide);
+        return;
+      }
+
+      emptyGuide.style.display = "none";
+
+      statusSections.forEach(status => {
+        const sectionLeads = leads.filter(l => l.status === status);
+        if (sectionLeads.length === 0) return;
+
+        const section = document.createElement("section");
+        section.classList.add("space-y-2");
+
+        const title = document.createElement("div");
+        title.className = `status-header status-${status.replace(" ", "-")}`;
+        title.innerText = `${status} [${sectionLeads.length}]`;
+
+        const list = document.createElement("div");
+        list.className = "space-y-2";
+
+        sectionLeads.forEach((lead, index) => {
+          const card = document.createElement("div");
+          card.className = "border border-gray-300 p-3 space-y-1";
+
+          card.innerHTML = `
+            <div class="text-sm">${lead.name}</div>
+            <div class="text-xs text-gray-700">${lead.number}</div>
+            <div class="flex gap-2 pt-2">
+              <button onclick="openPopup(${leads.indexOf(lead)})" class="border border-gray-300 px-2 py-1 text-xs">Edit</button>
+              <a href="https://wa.me/${lead.number}" class="border border-gray-300 px-2 py-1 text-xs">Message</a>
+              <a href="tel:${lead.number}" class="border border-gray-300 px-2 py-1 text-xs">Call</a>
+              <button onclick="confirmDelete(${leads.indexOf(lead)})" class="border border-red-300 text-red-500 px-2 py-1 text-xs">Delete</button>
+            </div>
+          `;
+          list.appendChild(card);
+        });
+
+        section.appendChild(title);
+        section.appendChild(list);
+        workspace.appendChild(section);
+      });
+    }
+
+    // Initialize the app when page loads
+    window.onload = async () => {
+      await init();
+    };
+
+    document.getElementById('helpButton').addEventListener('click', () => {
+    window.location.href = 'help.html';
+});
+  </script>
+</body>
+</html>

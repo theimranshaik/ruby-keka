@@ -1,0 +1,46 @@
+To add a "?" button at the bottom that redirects to `help.html`, here's the simple solution:
+
+**Add this HTML element** inside the `#gameContainer` div (after the instructions div):
+
+```html
+<div id="helpButton">?</div>
+```
+
+**Add this CSS** in the style section:
+
+```css
+#helpButton {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 30px;
+    height: 30px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s ease;
+}
+
+#helpButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: scale(1.1);
+}
+```
+
+**Add this JavaScript** at the end of your script section:
+
+```javascript
+document.getElementById('helpButton').addEventListener('click', () => {
+    window.location.href = 'help.html';
+});
+```
+
+This creates a circular "?" button at the bottom right that matches your game's design and redirects to `help.html` when clicked.

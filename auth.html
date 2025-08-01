@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruby - Auth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;0,500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+            color: #1a1a1a;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .logo {
+            font-family: 'Instrument Serif', serif;
+            font-size: 32px;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 60px;
+            margin-top: -20vh;
+        }
+        
+        .auth-form {
+            background: white;
+            padding: 40px;
+            border: 1px solid #e0e0e0;
+            border-radius: 0px;
+        }
+        
+        .form-title {
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 16px;
+            border: 1px solid #d0d0d0;
+            border-radius: 0px;
+            background: white;
+            font-family: 'Instrument Sans', sans-serif;
+        }
+        
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #333;
+        }
+        
+        .continue-btn {
+            width: 100%;
+            padding: 14px;
+            background: #1a1a1a;
+            color: white;
+            border: none;
+            border-radius: 100px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Instrument Sans', sans-serif;
+            margin-top: 10px;
+        }
+        
+        .continue-btn:hover {
+            background: #333;
+        }
+        
+        .continue-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status-message {
+            margin-top: 20px;
+            padding: 12px 16px;
+            border-radius: 0px;
+            font-size: 14px;
+            text-align: center;
+            min-height: 20px;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Ruby</div>
+        
+        <div class="auth-form">
+            <div class="form-title">Log in or sign up with Ruby</div>
+            
+            <form id="authForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                
+                <button type="submit" class="continue-btn" id="continueBtn">Continue</button>
+            </form>
+            
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://znjvipwcwauhshqoawsg.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuanZpcHdjd2F1aHNocW9hd3NnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5NzA3MTYsImV4cCI6MjA2OTU0NjcxNn0.OqcI8oPo35hppzKRlzCQMFPcFWU-ZhTdbE74i7aLebw';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        const form = document.getElementById('authForm');
+        const continueBtn = document.getElementById('continueBtn');
+        const statusMessage = document.getElementById('statusMessage');
+
+        function showStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message status-${type}`;
+        }
+
+        function clearStatus() {
+            statusMessage.textContent = '';
+            statusMessage.className = 'status-message';
+        }
+
+        async function handleAuth(email, password, confirmPassword) {
+            if (password !== confirmPassword) {
+                showStatus('Passwords do not match', 'error');
+                return;
+            }
+
+            continueBtn.disabled = true;
+            showStatus('Processing...', 'info');
+
+            try {
+                // Try to sign in first
+                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (signInData.user) {
+                    showStatus('Welcome back! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                    return;
+                }
+
+                // If sign in fails, try to sign up
+                if (signInError && signInError.message.includes('Invalid login credentials')) {
+                    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                        email: email,
+                        password: password
+                    });
+
+                    if (signUpError) {
+                        showStatus(signUpError.message, 'error');
+                    } else if (signUpData.user) {
+                        if (signUpData.user.email_confirmed_at) {
+                            showStatus('Account created! Redirecting...', 'success');
+                            setTimeout(() => {
+                                window.location.href = 'index.html';
+                            }, 1000);
+                        } else {
+                            showStatus('Please check your email to confirm your account', 'info');
+                        }
+                    }
+                } else {
+                    showStatus(signInError.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Something went wrong. Please try again.', 'error');
+            } finally {
+                continueBtn.disabled = false;
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearStatus();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            await handleAuth(email, password, confirmPassword);
+        });
+
+        // Check if user is already logged in
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>
