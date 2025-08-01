@@ -267,6 +267,8 @@ paymentBtn.style.display = 'none';
     // Initialize page
     window.onload = async () => {
       await checkUserStatus();
+      // HACK: Hide payment button - handle manually in database
+      paymentBtn.style.display = 'none';
     };
 
     // Handle WhatsApp payment link (alternative payment method)
